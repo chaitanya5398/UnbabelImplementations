@@ -22,13 +22,12 @@ Functions
 
 FileName: data_load*.py
 Functions
-	1) make_align_dict(): Gets the alignments dictionary.
-	   		      Key = TargetWordIndex.
-			      Value = List Of Source Word Indices that
-			      are aligned to it.
+
+	1) make_align_dict(): Gets the alignments dictionary, Key = TargetWordIndex, Value = List Of Source Word Indices that are aligned to it.
 	2) get_target_embedding(): It gives the polyglot embedding of the taget sentense words.
 	3) get_source_embedding(): It gives the polyglot embeddings of the words aligned to the target word.
 	4) get_pos_embedding(): gives the pos embeddings.
 	5) get_sentense_inputs(): It gives the list of embeddings/ list of lists of embeddings for sentense.
 	6) get_data_mats(): returns the data of all the sentenses.
 
+	
