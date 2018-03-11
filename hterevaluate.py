@@ -1,3 +1,6 @@
+#gives the pearson rho of the predictions.
+#Running instruction: python hterevaluate.py  <name_of_prediction_file>
+
 from scipy.stats import pearsonr
 from sklearn.metrics import mean_absolute_error as mae
 from sklearn.metrics import mean_squared_error as mse

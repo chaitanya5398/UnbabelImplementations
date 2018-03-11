@@ -1,7 +1,8 @@
+import sys
 from sklearn.metrics import f1_score
 
 ref_tags='/home/krishna/Summarizartion/TQE/data/t2/train/dev.tags'
-pred_tags='NueralOutputsNoPos.txt'
+pred_tags=sys.argv[1]
 
 def generate_labels(fname):
     fl=[]
