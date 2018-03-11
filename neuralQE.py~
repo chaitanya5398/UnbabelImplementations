@@ -1,0 +1,130 @@
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation,Bidirectional,GRU,BatchNormalization,TimeDistributed
+from keras import optimizers
+from keras import metrics
+from keras import backend as K
+from data_load import *
+
+testdir='/home/krishna/Summarizartion/TQE/data/t2/test'
+traindir='/home/krishna/Summarizartion/TQE/data/t2/train'
+
+#Function to get the F1 score.
+
+#defined for softmax outputs of two classes.
+# so [0,:] means taking only the output and
+#not the entire softmax tensor.
+def tp(y_true,y_pred):
+    return K.sum(K.round(K.clip(y_true[0,:] * y_pred[0,:], 0, 1)))
+def pos_pos(y_true,y_pred):
+    return K.sum(K.round(K.clip(y_true[0,:], 0, 1)))
+def pred_pos(y_true,y_pred):
+    return K.sum(K.round(K.clip(y_pred[0,:], 0, 1)))
+
+def f1(y_true, y_pred):
+    def recall(y_true, y_pred):
+        """Recall metric.
+
+        Only computes a batch-wise average of recall.
+
+        Computes the recall, a metric for multi-label classification of
+        how many relevant items are selected.
+        """
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+        recall = true_positives / (possible_positives + K.epsilon())
+        return recall
+
+    def precision(y_true, y_pred):
+        """Precision metric.
+
+        Only computes a batch-wise average of precision.
+
+        Computes the precision, a metric for multi-label classification of
+        how many selected items are relevant.
+        """
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+        precision = true_positives / (predicted_positives + K.epsilon())
+        return precision
+    precision = precision(y_true, y_pred)
+    recall = recall(y_true, y_pred)
+    return 2*((precision*recall)/(precision+recall))
+
+
+
+#The model part of the code.
+
+def create_model():
+    model = Sequential()
+    #Take the input layer here.
+    model.add(TimeDistributed(Dropout(0.5),input_shape=(None,684)))
+    model.add(TimeDistributed(Dense(400,activation='relu')))
+    model.add(TimeDistributed(Dense(400,activation='relu')))
+    model.add(Bidirectional(GRU(200,return_sequences=True),merge_mode='concat'))
+    model.add(BatchNormalization())
+    model.add(TimeDistributed(Dense(200,activation='relu')))
+    model.add(TimeDistributed(Dense(200,activation='relu')))
+    model.add(Bidirectional(GRU(100,return_sequences=True),merge_mode='concat'))
+    model.add(BatchNormalization())
+    model.add(TimeDistributed(Dense(100,activation='relu')))
+    model.add(TimeDistributed(Dense(50,activation='relu')))
+    model.add(TimeDistributed(Dense(2,activation='softmax')))
+    model.compile(loss='categorical_crossentropy',optimizer='rmsprop',metrics=['accuracy',tp,pos_pos,pred_pos])
+    return model
+
+#The function for sentense-length batchwise fitting , testing.
+#Train is a boolean to tell whetet to fit/evaluate.
+def batch_wise_operate(model,x_t,y_t,minlen,train):
+    cur_len=minlen
+    tx=[]
+    ty=[]
+    if train==0:
+        acc=[]
+    for j in range(len(x_t)):
+        slen = x_t[j].shape[0]
+        #print slen
+        if cur_len==slen:
+            tx.append(x_t[j])
+            ty.append(y_t[j])
+            #print y_t[j].shape
+        else:
+            #print len(ty), "  sentese length ",cur_len
+            tx = np.stack(tx)
+            #print tx.shape
+            ty = np.stack(ty)
+            #print ty.shape
+            if train:
+                model.fit(tx,ty,batch_size=50)
+            else:
+                acc.append(model.evaluate(tx,ty,batch_size=50))
+            cur_len = slen
+            tx=[x_t[j]]
+            ty=[y_t[j]]
+    if train==0:
+        return acc
+    return model
+
+if __name__=='__main__':
+    #Fiiting data.
+    tr_flist  =  ['train.mt','train.src','train.align','train.tags']
+    testdir = '/home/krishna/Summarizartion/TQE/data/t2/train/'
+    traindir = '/home/krishna/Summarizartion/TQE/data/t2/test/'
+    x_t,y_t,tr_min = get_data_mats(tr_flist,testdir)
+    #Testing the data.
+    dev_flist  =  ['dev.mt','dev.src','dev.align','dev.tags']
+    x_dev,y_dev,dev_min = get_data_mats(dev_flist,testdir)
+    model = create_model()
+    model = batch_wise_operate(model,x_t,y_t,tr_min,1)
+    acc_ret = batch_wise_operate(model,x_dev,y_dev,dev_min,0)
+    print acc_ret
+    acc_ret = np.array(acc_ret)
+    loss,acc,tpm,posm,predm = np.mean(acc_ret,axis=0)
+    lssum,acsum,tpf,posposf,predposf = np.sum(acc_ret,axis=0)
+    print "The overall loss ",loss
+    print "The overall accuracy ",acc
+    recall = float(tpf/(posposf+K.epsilon()))
+    pres = float(tpf/(predposf + K.epsilon()))
+    print "Precission ",pres," Recall ",recall
+    f1sf = 2*pres*recall/(pres+recall)
+    print "The final f1scre is ",f1sf
+    

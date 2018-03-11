@@ -1,0 +1,51 @@
+import numpy as np
+from polyglot.mapping import Embedding
+import pickle
+
+datadir='/home/krishna/Summarizartion/TQE/data/t2/train/'
+en_embeddings = Embedding.load("/home/krishna/polyglot_data/embeddings2/en/embeddings_pkl.tar.bz2")
+de_embeddings = Embedding.load("/home/krishna/polyglot_data/embeddings2/de/embeddings_pkl.tar.bz2")
+print en_embeddings.shape
+exit()
+
+def make_align_dict(inp):
+    inplist = inp.split()
+    aldict={}
+    for j in inplist:
+        a,b = j.split('-')
+        a,b = int(a),int(b)
+        if b not in aldict:
+            aldict[b] = []
+        aldict[b].append(a)
+    return aldict
+
+def get_sentense_inputs(sent):
+    tl = sent[3].split()
+    labels = np.array([1 if x=='OK' else 0 for x in tl])
+    print sent
+    sc_words = sent[1].split()
+    tr_words = sent[0].split()
+    #gives a dict key-> source index value list of aligned words.
+    align_dict = make_align_dict(sent[2])
+    print align_dict
+    for j in len(tr_words):
+        
+
+if __name__=='__main__':
+    dmat=[]   #The main list having the sentense info.
+    flist=['train.mt','train.src','train.align','train.tags']
+    for fn in flist:
+        with open(datadir+fn,'r') as fp:
+            fl=[]
+            for j in fp:
+                fl.append(j.decode('utf-8').strip())
+            dmat.append(list(fl))
+    dmat = np.array(dmat)
+    dmat = list(np.transpose(dmat))
+    #Sorting the sentenses based on target length.
+    dmat = sorted(dmat,key=lambda x: len(x[0].split()))
+    dmat = np.array(dmat)
+    for j in dmat:
+        get_sentense_inputs(j)
+        break
+
