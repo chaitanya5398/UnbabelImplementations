@@ -7,6 +7,7 @@ from data_loadL2 import get_data_mats
 from functools import partial
 from itertools import product
 import numpy as np
+from gruln import GRULN
 
 testdir='/home/krishna/Summarizartion/TQE/data/t2/test'
 traindir='/home/krishna/Summarizartion/TQE/data/t2/train'
@@ -41,7 +42,7 @@ def weighted_categorical_crossentropy(weights):
 
 #The model part of the code.
 def create_model():
-    #There are 46 unique pos-tags
+    #There are 55 unique pos-tags
     #Take the input layer here.
     WordInput = Input(shape=(None,384))
     spi1 = Input(shape=(None,))
@@ -51,24 +52,24 @@ def create_model():
     tpi2 = Input(shape=(None,))
     tpi3 = Input(shape=(None,))
 
-    spe1 = Embedding(50,50)(spi1)
-    spe2 = Embedding(50,50)(spi2)
-    spe3 = Embedding(50,50)(spi3)
-    tpe1 = Embedding(50,150)(tpi1)
-    tpe2 = Embedding(50,150)(tpi2)
-    tpe3 = Embedding(50,150)(tpi3)
+    spe1 = Embedding(60,50)(spi1)
+    spe2 = Embedding(60,50)(spi2)
+    spe3 = Embedding(60,50)(spi3)
+    tpe1 = Embedding(60,50)(tpi1)
+    tpe2 = Embedding(60,50)(tpi2)
+    tpe3 = Embedding(60,50)(tpi3)
     #Complete this from here.
 
     x = concatenate([WordInput,spe1,spe2,spe3,tpe1,tpe2,tpe3])
     x = TimeDistributed(Dropout(0.5))(x)
     x = TimeDistributed(Dense(400,activation='relu'))(x)
     x = TimeDistributed(Dense(400,activation='relu'))(x)
-    x = Bidirectional(GRU(200,return_sequences=True),merge_mode='concat')(x)
-    x = BatchNormalization()(x)
+    x = Bidirectional(GRULN(200,return_sequences=True),merge_mode='concat')(x)
+    #x = BatchNormalization()(x)
     x = TimeDistributed(Dense(200,activation='relu'))(x)
     x = TimeDistributed(Dense(200,activation='relu'))(x)
-    x = Bidirectional(GRU(100,return_sequences=True),merge_mode='concat')(x)
-    x = BatchNormalization()(x)
+    x = Bidirectional(GRULN(100,return_sequences=True),merge_mode='concat')(x)
+    #x = BatchNormalization()(x)
     x = TimeDistributed(Dense(100,activation='relu'))(x)
     x = TimeDistributed(Dense(50,activation='relu'))(x)
     x = TimeDistributed(Dense(2,activation='softmax'))(x)
@@ -122,9 +123,9 @@ def batch_wise_operate(model,x_t,y_t,minlen,train):
             tx = [tx,sp1,sp2,sp3,tp1,tp2,tp3]
             ty = np.stack(ty)
             if train:
-                model.fit(tx,ty,batch_size=50,epochs=10)
+                model.fit(tx,ty,batch_size=50)
             else:
-                acc.append(model.predict(tx,batch_size=50))
+                acc.append(model.predict(tx))
             cur_len = slen
             tx=[x_t[j]]
             sp1=[spl1[j]]
@@ -156,8 +157,8 @@ if __name__=='__main__':
     model = batch_wise_operate(model,x_t,y_t,tr_min,1)
 
     #Saving predictions.
-    outfile='NueralOutputsLearn3Pos.txt'
-    hteroutfile='NueralHTERsLearn3Pos.txt'
+    outfile='GRULNLearn3Pos.txt'
+    hteroutfile='GRULNLearn3Pos.txt'
     hfp = open(hteroutfile,'w')
     with open(outfile,'w') as fp:
         sld1 = x_dev[1]
